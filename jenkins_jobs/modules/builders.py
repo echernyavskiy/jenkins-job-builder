@@ -1360,3 +1360,67 @@ def managed_script(parser, xml_parent, data):
     args = XML.SubElement(ms, 'buildStepArgs')
     for arg in data.get('args', []):
         XML.SubElement(args, 'string').text = arg
+
+def phing(parser, xml_parent, data):
+    """yaml: phing
+    Execute a Phing target.  Requires the Jenkins `Phing Plugin.
+    <https://wiki.jenkins-ci.org/display/JENKINS/Phing+Plugin>`_
+
+    To setup this builder you can either reference the list of targets
+    or use named parameters. Below is a description of both forms:
+
+    *1) Listing targets:*
+
+    After the Phing directive, simply pass as argument a space separated list
+    of targets to build.
+
+    :Parameter: space separated list of Phing targets
+
+    Example to call two Phing targets:
+
+    .. literalinclude:: ../../tests/builders/fixtures/phing001.yaml
+       :language: yaml
+
+    The build file would be whatever the Jenkins Phing Plugin is set to use
+    per default (i.e build.xml in the workspace root).
+
+    *2) Using named parameters:*
+
+    :arg str targets: the space separated list of Phing targets.
+    :arg str buildfile: the path to the Phing build file.
+    :arg list properties: Passed to Phing script using -Dkey=value. (optional)
+    :arg str options: command line options for Phing. (optional)
+    :arg bool useModuleRoot: Whether to use ModuleRoot as working directory.
+        (optional)
+
+    Example specifying the build file too and several targets:
+
+    .. literalinclude:: ../../tests/builders/fixtures/phing002.yaml
+       :language: yaml
+    """
+    phing = XML.SubElement(xml_parent, 'hudson.plugins.phing.PhingBuilder')
+
+    if type(data) is str:
+        # Support for short form: -phing: "target"
+        data = {'targets': data}
+    for setting, value in sorted(data.iteritems()):
+        if setting == 'targets':
+            targets = XML.SubElement(phing, 'targets')
+            targets.text = value
+        if setting == 'buildfile':
+            buildfile = XML.SubElement(phing, 'buildFile')
+            buildfile.text = value
+        if setting == 'properties':
+            properties = data['properties']
+            prop_string = ''
+            for prop, val in properties.items():
+                prop_string += "%s=%s\n" % (prop, val)
+            prop_element = XML.SubElement(phing, 'properties')
+            prop_element.text = prop_string
+        if setting == 'options':
+            options = data['options']
+            opt_string = ' '.join(options)
+            opt_element = XML.SubElement(phing, 'options')
+            opt_element.text = opt_string
+        XML.SubElement(phing, 'useModuleRoot').text = str(data.get(
+        'useModuleRoot', False)).lower()
